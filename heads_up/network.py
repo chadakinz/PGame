@@ -3,7 +3,7 @@ import dill as pickle
 class Network:
     def __init__(self, purpose):
         self.client = socket(AF_INET, SOCK_STREAM)
-        self.server = "192.168.1.7"
+        self.server = "192.168.1.196"
         self.port = 5556
         self.addr = (self.server, self.port)
         self.id  = self.connect()

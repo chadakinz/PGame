@@ -38,7 +38,7 @@ def update(conn, id):
         pass
 
 def thread(conn, player):
-    global data, val, val2
+    global data, player_turn, round
 
     connections[player.id] = conn
     opp_id = 1 if player.id == 2 else 2
@@ -143,7 +143,7 @@ def thread(conn, player):
 
 
 def game():
-    global val, val2
+    global player_turn, round
     #End round
     while True:
         print(f'Transitioning!')
@@ -192,8 +192,8 @@ def game():
 
 
 data = None
-val = True
-val2 = True
+player_turn = True
+round = True
 val3 = True
 count = 0
 while True:

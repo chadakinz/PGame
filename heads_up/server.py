@@ -5,7 +5,7 @@ from table import Table
 import sys
 import dill as pickle
 
-SERVER = "192.168.1.7"
+SERVER = "192.168.1.196"
 PORT = 5556
 clients = []
 s = socket(AF_INET, SOCK_STREAM)
@@ -41,7 +41,7 @@ def update(conn, id):
 
 """This thread takes the action made by the user and passes it to the table to update the game attributes"""
 def thread(conn, player):
-    global data, val, val2
+    global data, player_turn, round
 
     connections[player.id] = conn
     opp_id = 1 if player.id == 2 else 2
@@ -57,10 +57,7 @@ def thread(conn, player):
         player, action = data[0], data[1]
         table.players[player.id - 1] = player
 
-
-
         print(f'Data received: {data}')
-
 
         if action == "Fold":
             print(f'Folded Player {opp_id} wins {table.pot} chips')
@@ -71,7 +68,7 @@ def thread(conn, player):
             table.pot = 0
             table.reset()
 
-            val2 = False
+            round = False
 
 
         if action == "Raise":
@@ -83,7 +80,7 @@ def thread(conn, player):
 
             table.pot += table.players[player.id - 1].raise_amnt
             conn.send(pickle.dumps(False))
-            val = False
+            player_turn = False
             if table.first_act == False:
                 table.first_act = True
 
@@ -103,12 +100,12 @@ def thread(conn, player):
             conn.send(pickle.dumps(True))
 
             if table.first_act == False:
-                val = False
+                player_turn = False
 
                 table.first_act = True
             else:
 
-                val2 = False
+                round = False
 
                 #turn ends
 
@@ -118,9 +115,9 @@ def thread(conn, player):
             conn.send(pickle.dumps(table.players[player.id - 1]))
             if table.first_act == False:
                 table.first_act = True
-                val = False
+                player_turn = False
             else:
-                val2 = False
+                round = False
 
         if action == 'All_In':
             if table.players[player.id - 1].raise_tot - table.players[opp_id - 1].raise_tot > table.players[opp_id - 1].chips :
@@ -132,7 +129,7 @@ def thread(conn, player):
                 table.pot += table.players[player.id - 1].raise_amnt
             table.shove = True
             #table.all_in()
-            val = False
+            player_turn = False
             if table.first_act == False:
                 table.first_act = True
 
@@ -141,42 +138,52 @@ def thread(conn, player):
 
 
 
-"""This thread keeps the game running. It is responsible for transitioning 
-rounds and sending information to the client when it is its turn to bet"""
+
 #FIXME fix variables and try to find an easier solution
+
+'''
+This thread keeps the game running. It is responsible for transitioning 
+rounds and sending information to the client when it is its turn to bet
+
+One poker game consists of multiple rounds, where each round has 4 states: preflop, flop, turn, river. 
+When a round ends we restart the round loop, and when a player turn ends we go through the list of players
+to find the next players turn
+
+'''
 def game():
-    global val, val2
-    #End round
-    """This loop transitions the rounds, from moving the game from pre-flop to flop, turn, and then river back to preflop"""
+    global player_turn, round
+
     while True:
         print(f'Transitioning!')
-        val2 = True
-
+        round = True
         table.transition()
         table.first_act = False
-        #Next player turn
-        """Responsible for sending information on when to bet to each player"""
-        while val2:
 
+        while round:
+            #FIXME only works for two players
+            ''' This tracks the dealers position so we know which player is first to act'''
             if table.dealer == 0:
                 player_list = table.players
             else:
                 player_list = reversed(table.players)
-
+            '''
+            
+                If a player finishes their turn we find the next player to act
+            '''
             for i in player_list:
 
                 table.players[i.id - 1].isTurn = True
 
-                val = True
+                player_turn = True
 
                 connections[i.id].send(pickle.dumps('bet'))
 
                 """After information is sent we wait until the player finishes their turn"""""
-                while val:
+                while player_turn:
 
-                    if val2 == False:
-
+                    if round == False:
                         break
+
                     else:
                         table.players[i.id - 1].isTurn = False
                         continue
@@ -195,18 +202,35 @@ def game():
 
 
 data = None
-val = True
-val2 = True
+player_turn = True
+round = True
 val3 = True
 count = 0
+
+
+
+'''
+Main thread that handles connections. when a connection joins the server it states a purpose which is handled by the server,
+the purposes are listed as such: 
+
+opp (#FIXME should not be named opp): Start a thread that sends constant information of the table to the client so it 
+can display contents on the screen
+
+player: This thread initializes information about the player; it gives them their ID and card position #FIXME 
+(This method only works for 2 players)
+
+else #FIXME (This should be named beter for organization) : This starts a thread connected to an individual client that handles information 
+about the betting action of the player
+
+Finally, if there are 2 players, we start the game thread that cycles through the rounds and sends information 
+to the clients when it is their turn to act
+'''
 while True:
 
     conn, addr = s.accept()
 
     purpose = pickle.loads(conn.recv(2048))
     print(f'Connected by : {addr} with conn: {conn} with intent: {purpose}')
-
-
 
 
     if purpose[1] == "opp":

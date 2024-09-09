@@ -20,6 +20,7 @@ def is_clicked(x1, y1, button, pressed):
         btn2 = False
 
 
+
 """Function is run if the player chooses to raise"""
 def raising(boolo, call_amnt):
     global opp, player, user_text, btn3, placeholder, erase
@@ -64,6 +65,8 @@ def raising(boolo, call_amnt):
     return (player, 'Raise')
 
 """Function is run when it is the players turn to bet"""
+
+
 def betting():
     global player, opp, btn2, btn1, btn3, x, y, erase
     time.sleep(.5)
@@ -140,7 +143,7 @@ def betting():
 
 
 
-"""Recieves constant and immediate information from the server on the cards on the board,
+"""Recieves constant and immediate information from the server about the cards on the board,
  the opponent player object, and the players attributes, then displays the information on the screen"""
 def update_game():
     global raise_tot, player, opp, erase
